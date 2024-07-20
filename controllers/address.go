@@ -14,6 +14,5 @@ func EditWorkAddress() gin.HandlerFunc {
 
 }
 
-func DeleteAddress() gin.HandlerFunc {
-
+func DeleteAddress() gin.HandlerFunc{
 }
