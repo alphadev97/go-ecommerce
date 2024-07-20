@@ -1,11 +1,15 @@
 package controllers
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/alphadev97/go-ecommerce/database"
 	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
@@ -37,6 +41,22 @@ func (app *Application) AddToCart() gin.HandlerFunc {
 			_ = c.AbortWithError(http.StatusBadRequest, errors.New("user id is empty"))
 			return
 		}
+
+		productID, err := primitive.ObjectIDFromHex(productQueryID)
+		if err != nil {
+			log.Println(err)
+			c.AbortWithStatus(http.StatusInternalServerError)
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+
+		err = database.AddProductToCart(ctx, app.prodCollection, app.userCollection, productID, userQueryID)
+		if err != nil {
+			c.IndentedJSON(http.StatusInternalServerError, err)
+		}
+		c.IndentedJSON(200, "Successfully added to the cart")
 	}
 }
 
