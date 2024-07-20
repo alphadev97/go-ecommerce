@@ -2,6 +2,7 @@ package controllers
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -45,6 +46,32 @@ func AddAddress() gin.HandlerFunc {
 		if err != nil {
 			c.IndentedJSON(500, "Internal server error")
 		}
+
+		var addressinfo []bson.M
+		if err := pointcursor.All(ctx, &addressinfo); err != nil {
+			panic(err)
+		}
+
+		var size int32
+
+		for _, address_no := range addressinfo {
+			count := address_no["count"]
+			size = count.(int32)
+		}
+
+		if size < 2 {
+			filter := bson.D{primitive.E{Key: "_id", Value: address}}
+			update := bson.D{{Key: "$push", Value: bson.D{primitive.E{Key: "address", Value: addresses}}}}
+
+			_, err := UserCollection.UpdateOne(ctx, filter, update)
+			if err != nil {
+				fmt.Println(err)
+			}
+		} else {
+			c.IndentedJSON(400, "Not allowed")
+		}
+		defer cancel()
+		ctx.Done()
 
 	}
 }
