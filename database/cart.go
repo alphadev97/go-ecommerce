@@ -20,7 +20,7 @@ func RemoveCartItem() {
 
 }
 
-func ByItemFromCart() {
+func BuyItemFromCart() {
 
 }
 
