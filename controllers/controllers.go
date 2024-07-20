@@ -9,6 +9,7 @@ import (
 
 	"github.com/alphadev97/go-ecommerce/database"
 	"github.com/alphadev97/go-ecommerce/models"
+	generate "github.com/alphadev97/go-ecommerce/tokens"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	"go.mongodb.org/mongo-driver/bson"
@@ -122,6 +123,8 @@ func Login() gin.HandlerFunc {
 		defer cancel()
 
 		var user models.User
+		var founduser models.User
+
 		if err := c.BindJSON(&user); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 			return
@@ -176,9 +179,9 @@ func SearchProduct() gin.HandlerFunc {
 			return
 		}
 
-		defer cursor.Close()
+		defer cursor.Close(ctx)
 
-		if err := cursor.err(); err != nil {
+		if err := cursor.Err(); err != nil {
 			log.Println(err)
 			c.IndentedJSON(400, "invalid")
 			return
@@ -188,4 +191,47 @@ func SearchProduct() gin.HandlerFunc {
 	}
 }
 
-func SearchProductByQuery() gin.HandlerFunc
+func SearchProductByQuery() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var searchProducts []models.Product
+		queryParam := c.Query("name")
+
+		// you want to check if params empty
+
+		if queryParam == "" {
+			log.Println("query is empty")
+			c.Header("Content-Type", "application/json")
+			c.JSON(http.StatusNotFound, gin.H{"error": "Invalid search index"})
+			c.Abort()
+			return
+		}
+
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+		defer cancel()
+
+		searchquerydb, err := ProductCollection.Find(ctx, bson.M{"product_name": bson.M{"$regex": queryParam}})
+		if err != nil {
+			c.IndentedJSON(404, "something went wrong while fetching the data")
+			return
+		}
+
+		err = searchquerydb.All(ctx, &searchProducts)
+		if err != nil {
+			log.Println(err)
+			c.IndentedJSON(400, "invalid")
+			return
+		}
+
+		defer searchquerydb.Close(ctx)
+
+		if err := searchquerydb.Err(); err != nil {
+			log.Println(err)
+			c.IndentedJSON(400, "invalid request")
+			return
+		}
+
+		defer cancel()
+		c.IndentedJSON(200, searchProducts)
+
+	}
+}
