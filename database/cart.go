@@ -74,6 +74,8 @@ func BuyItemFromCart(ctx context.Context, userCollection *mongo.Collection, user
 	// fetch the cart of the user
 	// find the cart total
 	// create an order with the items
+	// added order to the user collection
+	// added items in the cart to order list
 	// empty up the cart
 
 	id, err := primitive.ObjectIDFromHex(userID)
