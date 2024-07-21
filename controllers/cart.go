@@ -159,7 +159,7 @@ func (app *Application) BuyFromCart() gin.HandlerFunc {
 			c.IndentedJSON(http.StatusInternalServerError, err)
 		}
 
-		c.IndentedJSON("successfully placed the order")
+		c.IndentedJSON(200, "successfully placed the order")
 
 	}
 }
