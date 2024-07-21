@@ -43,18 +43,18 @@ func TokenGenerator(email string, firstname string, lastname string, uid string)
 		},
 	}
 
-	token, err := jwt.NewWithClaims(jwt.SigningMethodES256, claims).SignedString([]byte(SECRET_KEY))
+	token, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
 		return "", "", err
 	}
 
-	refereshtoken, err := jwt.NewWithClaims(jwt.SigningMethodES256, refereshclaims).SignedString([]byte(SECRET_KEY))
+	refereshtoken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refereshclaims).SignedString([]byte(SECRET_KEY))
 	if err != nil {
 		log.Panic(err)
-		return
+		return "", "", err
 	}
 
-	return token, refereshtoken, err
+	return token, refereshtoken, nil
 }
 
 func ValidateToken(signedtoken string) (claims *SignedDetails, msg string) {
@@ -70,6 +70,7 @@ func ValidateToken(signedtoken string) (claims *SignedDetails, msg string) {
 	claims, ok := token.Claims.(*SignedDetails)
 	if !ok {
 		msg = "the token is invalid"
+		return
 	}
 
 	if claims.ExpiresAt < time.Now().Local().Unix() {
@@ -77,12 +78,12 @@ func ValidateToken(signedtoken string) (claims *SignedDetails, msg string) {
 		return
 	}
 
-	return claims, msg
+	return claims, ""
 }
 
 func UpdateAllTokens(signedtoken string, signedrefereshtoken string, userid string) {
-
 	var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
+	defer cancel()
 
 	var updateobj primitive.D
 
@@ -90,21 +91,17 @@ func UpdateAllTokens(signedtoken string, signedrefereshtoken string, userid stri
 	updateobj = append(updateobj, bson.E{Key: "referesh_token", Value: signedrefereshtoken})
 
 	updated_at, _ := time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-
 	updateobj = append(updateobj, bson.E{Key: "updatedat", Value: updated_at})
 
 	upsert := true
-
 	filter := bson.M{"user_id": userid}
 	opt := options.UpdateOptions{
 		Upsert: &upsert,
 	}
 	_, err := UserData.UpdateOne(ctx, filter, bson.D{{Key: "$set", Value: updateobj}}, &opt)
-	defer cancel()
 
 	if err != nil {
 		log.Panic(err)
 		return
 	}
-
 }
